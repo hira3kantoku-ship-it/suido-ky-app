@@ -1,25 +1,54 @@
 // Vercel Function: PDF を Google Drive にアップロード
-// google-auth-library を使用（PKCS#8キー対応）
-
-import { GoogleAuth } from 'google-auth-library';
+// Web Crypto API を使用（PKCS#8キー対応・外部依存なし）
 
 async function getAccessToken() {
-  const credentials = {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-  };
+  const email = process.env.GOOGLE_CLIENT_EMAIL;
+  const rawKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  const auth = new GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+  // PEMからDERバイナリを取得
+  const pemBody = rawKey
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s+/g, '');
+  const der = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+
+  // Web Crypto API で PKCS#8 キーをインポート
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    der,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const payload = btoa(JSON.stringify({
+    iss: email,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now,
+  })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const sigInput = new TextEncoder().encode(`${header}.${payload}`);
+  const sigBuf = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, sigInput);
+  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const jwt = `${header}.${payload}.${sig}`;
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   });
+  const tokenData = await tokenRes.json();
+  if (!tokenData.access_token) throw new Error('token_error: ' + JSON.stringify(tokenData));
 
-  const client = await auth.getClient();
-  const tokenData = await client.getAccessToken();
-  return {
-    access_token: tokenData.token,
-    folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
-  };
+  return { access_token: tokenData.access_token, folderId };
 }
 
 export default async function handler(req, res) {
