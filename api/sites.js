@@ -40,6 +40,27 @@ async function readConfigFile(token, fileId) {
   return res.json();
 }
 
+async function getOrCreateFolder(token, name, parentId) {
+  const q = encodeURIComponent(
+    `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
+  );
+  const searchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const { files } = await searchRes.json();
+  if (files && files.length > 0) return files[0].id;
+
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] }),
+  });
+  if (!createRes.ok) throw new Error(`folder_create_error(${createRes.status})`);
+  const folder = await createRes.json();
+  return folder.id;
+}
+
 async function writeConfigFile(token, folderId, sites, existingFileId) {
   const content = JSON.stringify({ sites }, null, 2);
   const metadata = JSON.stringify(
@@ -101,8 +122,20 @@ export default async function handler(req, res) {
       }
       const token = await getAccessToken();
       const existingFileId = await findConfigFile(token, folderId);
+
+      // 既存の現場名を取得して新規追加分のフォルダを作成
+      let existingSites = [];
+      if (existingFileId) {
+        const config = await readConfigFile(token, existingFileId);
+        existingSites = config.sites || [];
+      }
+      const newSites = sites.filter(s => !existingSites.includes(s));
+      for (const site of newSites) {
+        await getOrCreateFolder(token, site.slice(0, 50), folderId);
+      }
+
       await writeConfigFile(token, folderId, sites, existingFileId);
-      return res.status(200).json({ success: true, count: sites.length });
+      return res.status(200).json({ success: true, count: sites.length, foldersCreated: newSites.length });
     }
 
     return res.status(405).json({ error: 'Method Not Allowed' });
