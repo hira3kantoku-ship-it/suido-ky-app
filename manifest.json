@@ -1,0 +1,14 @@
+{
+  "name": "KY活動表（水道・下水）",
+  "short_name": "KY水道",
+  "description": "水道・下水工事 危険予知活動記録アプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f4c81",
+  "theme_color": "#0f4c81",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
