@@ -1,54 +1,20 @@
 // Vercel Function: PDF を Google Drive にアップロード
-// Web Crypto API を使用（PKCS#8キー対応・外部依存なし）
+// OAuth2 リフレッシュトークン方式（個人Googleアカウント対応）
 
 async function getAccessToken() {
-  const email = process.env.GOOGLE_CLIENT_EMAIL;
-  const rawKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-
-  // PEMからDERバイナリを取得
-  const pemBody = rawKey
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/\s+/g, '');
-  const der = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
-
-  // Web Crypto API で PKCS#8 キーをインポート
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    der,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const now = Math.floor(Date.now() / 1000);
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const payload = btoa(JSON.stringify({
-    iss: email,
-    scope: 'https://www.googleapis.com/auth/drive.file',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-  const sigInput = new TextEncoder().encode(`${header}.${payload}`);
-  const sigBuf = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, sigInput);
-  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-  const jwt = `${header}.${payload}.${sig}`;
-
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+      refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
+      grant_type: 'refresh_token',
+    }),
   });
-  const tokenData = await tokenRes.json();
-  if (!tokenData.access_token) throw new Error('token_error: ' + JSON.stringify(tokenData));
-
-  return { access_token: tokenData.access_token, folderId };
+  const data = await res.json();
+  if (!data.access_token) throw new Error('token_error: ' + JSON.stringify(data));
+  return { access_token: data.access_token, folderId: process.env.GOOGLE_DRIVE_FOLDER_ID };
 }
 
 export default async function handler(req, res) {
