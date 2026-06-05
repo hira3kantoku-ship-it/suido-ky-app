@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>現場名管理ページ 操作案内（管理者用）</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN','Hiragino Sans','Meiryo',sans-serif;
+      background: #fff;
+      color: #1a202c;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 12mm 14mm;
+      background: #fff;
+    }
+
+    /* ヘッダー */
+    .header {
+      background: #0f4c81;
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .header-icon { font-size: 40px; }
+    .header-title h1 { font-size: 20px; font-weight: 800; letter-spacing: 0.05em; }
+    .header-title p { font-size: 12px; opacity: 0.85; margin-top: 3px; }
+    .header-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,0.25);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* QRセクション */
+    .qr-section {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      background: #eef4fb;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+    }
+    #qr-canvas { flex-shrink: 0; border-radius: 8px; }
+    .qr-info h2 { font-size: 15px; font-weight: 700; color: #0f4c81; margin-bottom: 8px; }
+    .url-box {
+      background: #0f4c81; color: #fff;
+      padding: 8px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.03em; margin-bottom: 10px;
+      word-break: break-all;
+    }
+    .qr-info p { font-size: 12px; color: #475569; line-height: 1.7; }
+
+    /* パスワードボックス */
+    .pw-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #fff3cd;
+      border: 2px solid #e8a020;
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 18px;
+    }
+    .pw-icon { font-size: 32px; flex-shrink: 0; }
+    .pw-content h3 { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 4px; }
+    .pw-number {
+      font-size: 36px;
+      font-weight: 900;
+      color: #0f4c81;
+      letter-spacing: 0.2em;
+      line-height: 1;
+    }
+    .pw-note { font-size: 11px; color: #78350f; margin-top: 4px; }
+
+    /* 操作手順 */
+    .steps-card {
+      border: 2px solid #0f4c81;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .steps-header {
+      background: #0f4c81; color: #fff;
+      padding: 9px 16px;
+      font-size: 14px; font-weight: 700;
+    }
+    .steps-body { padding: 14px 16px; }
+
+    .step-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .step-row:last-child { margin-bottom: 0; }
+    .step-num {
+      width: 26px; height: 26px; min-width: 26px;
+      background: #0f4c81; color: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-text { font-size: 13px; line-height: 1.7; }
+    .step-text strong { color: #0f4c81; }
+    .step-text .tag {
+      display: inline-block;
+      background: #f0f4f8; border: 1px solid #cbd5e1;
+      padding: 1px 7px; border-radius: 4px;
+      font-size: 11px; font-weight: 700;
+    }
+    .step-text .em {
+      background: #dbeafe; color: #1e40af;
+      padding: 1px 7px; border-radius: 4px;
+      font-size: 11px; font-weight: 700;
+    }
+
+    /* 操作一覧テーブル */
+    .op-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 12.5px;
+    }
+    .op-table th {
+      background: #0f4c81; color: #fff;
+      padding: 8px 12px; text-align: left; font-weight: 700;
+    }
+    .op-table th:first-child { border-radius: 8px 0 0 0; }
+    .op-table th:last-child { border-radius: 0 8px 0 0; }
+    .op-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      line-height: 1.6;
+    }
+    .op-table tr:last-child td { border-bottom: none; }
+    .op-table tr:nth-child(even) td { background: #f8fafc; }
+    .op-icon { font-size: 16px; }
+
+    /* 注意 */
+    .notes {
+      background: #fff8e1;
+      border: 2px solid #f59e0b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .notes h3 { font-size: 13px; font-weight: 700; color: #b45309; margin-bottom: 6px; }
+    .notes ul { padding-left: 18px; }
+    .notes li { font-size: 12px; line-height: 1.9; }
+
+    /* フッター */
+    .footer {
+      text-align: center; font-size: 10px; color: #94a3b8;
+      padding-top: 10px; border-top: 1px solid #e2e8f0;
+    }
+
+    /* 印刷バー */
+    .print-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #0f4c81; padding: 10px 20px;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .print-bar span { color: #fff; font-size: 14px; }
+    .btn-pdf {
+      background: #e8a020; color: #fff; border: none;
+      padding: 10px 28px; border-radius: 8px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-pdf:hover { background: #d4911a; }
+    body { padding-top: 52px; }
+
+    @page { size: A4; margin: 10mm 12mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding-top: 0; }
+      .print-bar { display: none; }
+      .page { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="print-bar">
+  <span>📄 印刷またはPDF保存</span>
+  <button class="btn-pdf" onclick="window.print()">📥 PDFで保存 / 印刷する</button>
+</div>
+
+<div class="page">
+
+  <div class="header">
+    <div class="header-icon">🔧</div>
+    <div class="header-title">
+      <h1>現場名管理ページ　操作案内</h1>
+      <p>水道・下水工事用 KY活動表アプリ｜現場名の追加・削除・並び替えができます</p>
+    </div>
+    <div class="header-badge">管理者専用</div>
+  </div>
+
+  <!-- QR -->
+  <div class="qr-section">
+    <div id="qr-canvas"></div>
+    <div class="qr-info">
+      <h2>📱 カメラでQRコードをスキャン、またはURLを直接入力</h2>
+      <div class="url-box">https://water-ky-app.vercel.app/admin.html</div>
+      <p>
+        ① スマホのカメラアプリを起動<br>
+        ② QRコードにかざす<br>
+        ③ 表示されたリンクをタップしてブラウザで開く<br>
+        ④ パスワードを入力してログイン
+      </p>
+    </div>
+  </div>
+
+  <!-- パスワード -->
+  <div class="pw-box">
+    <div class="pw-icon">🔑</div>
+    <div class="pw-content">
+      <h3>管理者パスワード</h3>
+      <div class="pw-number">3636</div>
+      <div class="pw-note">※このパスワードは管理者のみ共有してください</div>
+    </div>
+  </div>
+
+  <!-- 操作手順 -->
+  <div class="steps-card">
+    <div class="steps-header">📋 操作手順</div>
+    <div class="steps-body">
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text">QRコードまたはURLから管理ページを開き、パスワード <strong>3636</strong> を入力して<strong>「ログイン」</strong>をタップ</div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text">画面下の入力欄に現場名を入力して<strong>「追加」</strong>をタップ <span class="em">Enterキーでも追加できます</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text">各現場名の <strong>「▲」「▼」</strong> ボタンで表示順を並び替え、<strong>「削除」</strong>ボタンで削除</div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong>「💾 保存する」</strong>ボタンをタップして完了。「✅ 保存しました」と表示されれば全員のスマホに即時反映されます</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 操作一覧 -->
+  <table class="op-table">
+    <tr>
+      <th>操作</th>
+      <th>方法</th>
+    </tr>
+    <tr>
+      <td><span class="op-icon">➕</span>　現場名を追加</td>
+      <td>下部の入力欄に入力 →「追加」ボタン（またはEnter）</td>
+    </tr>
+    <tr>
+      <td><span class="op-icon">🗑️</span>　現場名を削除</td>
+      <td>削除したい行の「削除」ボタンをタップ</td>
+    </tr>
+    <tr>
+      <td><span class="op-icon">↕️</span>　順番を並び替え</td>
+      <td>「▲」「▼」ボタンで上下に移動</td>
+    </tr>
+    <tr>
+      <td><span class="op-icon">💾</span>　保存</td>
+      <td>「💾 保存する」ボタンをタップ（必ず最後に押す）</td>
+    </tr>
+  </table>
+
+  <div class="notes">
+    <h3>⚠️ ご注意</h3>
+    <ul>
+      <li>編集後は必ず<strong>「💾 保存する」</strong>を押してください。押さずに画面を閉じると変更が失われます</li>
+      <li>保存するとGoogle Driveに自動反映され、アプリを使用する全員の現場名リストが更新されます</li>
+      <li>「その他（手入力）」の選択肢はリストに関わらず常に表示されます</li>
+      <li>操作にはインターネット接続が必要です</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    水道・下水工事用 KY活動表アプリ　管理者向け操作案内　|　https://water-ky-app.vercel.app/admin.html
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  new QRCode(document.getElementById('qr-canvas'), {
+    text: 'https://water-ky-app.vercel.app/admin.html',
+    width: 160, height: 160,
+    colorDark: '#0f4c81',
+    colorLight: '#eef4fb',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+</body>
+</html>
