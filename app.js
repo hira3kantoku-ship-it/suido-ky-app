@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateDayOfWeek();
 
   buildWeatherSelect();
-  buildSiteSelect();
+  await buildSiteSelect();
   buildEquipmentLists();
   showStep(1);
 });
@@ -53,9 +53,21 @@ function buildWeatherSelect() {
 }
 
 /* ===== 現場名 ===== */
-function buildSiteSelect() {
+async function buildSiteSelect() {
   const sel = document.getElementById('field-site');
-  SITE_NAMES.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+  let names = [];
+  try {
+    const res = await fetch('/api/sites');
+    if (res.ok) {
+      const data = await res.json();
+      names = data.sites && data.sites.length > 0 ? data.sites : SITE_NAMES;
+    } else {
+      names = SITE_NAMES;
+    }
+  } catch {
+    names = SITE_NAMES;
+  }
+  names.forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
   const other = document.createElement('option'); other.value='__other__'; other.textContent='その他（手入力）'; sel.appendChild(other);
 }
 

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f4c81">
+  <title>現場名管理 — KY水道</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; color: #1e293b; min-height: 100vh; }
+
+    .header {
+      background: #0f4c81; color: #fff; padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header .badge {
+      background: rgba(255,255,255,0.2); border-radius: 6px;
+      padding: 2px 8px; font-size: 12px;
+    }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+
+    .card {
+      background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 20px; margin-bottom: 16px;
+    }
+    .card h2 { font-size: 15px; font-weight: 700; color: #0f4c81; margin-bottom: 16px; }
+
+    /* ログイン */
+    #login-section label { display: block; font-size: 13px; color: #64748b; margin-bottom: 6px; }
+    #login-section input[type=password] {
+      width: 100%; padding: 10px 14px; border: 2px solid #e2e8f0;
+      border-radius: 8px; font-size: 16px; outline: none;
+    }
+    #login-section input[type=password]:focus { border-color: #0f4c81; }
+    #login-error { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; }
+
+    /* 現場名リスト */
+    #site-list { list-style: none; }
+    #site-list li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    #site-list li:last-child { border-bottom: none; }
+    #site-list .site-name { flex: 1; font-size: 15px; }
+    #site-list .move-btn, #site-list .del-btn {
+      border: none; border-radius: 6px; padding: 6px 10px;
+      font-size: 14px; cursor: pointer; line-height: 1;
+    }
+    #site-list .move-btn { background: #f1f5f9; color: #475569; }
+    #site-list .move-btn:disabled { opacity: 0.3; cursor: default; }
+    #site-list .del-btn { background: #fee2e2; color: #dc2626; }
+
+    .add-row {
+      display: flex; gap: 8px; margin-top: 12px;
+    }
+    .add-row input[type=text] {
+      flex: 1; padding: 10px 14px; border: 2px solid #e2e8f0;
+      border-radius: 8px; font-size: 15px; outline: none;
+    }
+    .add-row input[type=text]:focus { border-color: #0f4c81; }
+
+    .empty-msg { color: #94a3b8; font-size: 14px; text-align: center; padding: 20px 0; }
+
+    /* ボタン */
+    .btn {
+      padding: 12px 20px; border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
+    }
+    .btn-primary { background: #0f4c81; color: #fff; }
+    .btn-primary:disabled { background: #94a3b8; cursor: default; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-outline { background: #f1f5f9; color: #475569; margin-top: 8px; }
+
+    .status-msg {
+      text-align: center; font-size: 14px; padding: 10px;
+      border-radius: 8px; margin-top: 12px; display: none;
+    }
+    .status-msg.ok { background: #d1fae5; color: #065f46; display: block; }
+    .status-msg.err { background: #fee2e2; color: #991b1b; display: block; }
+
+    #admin-section { display: none; }
+
+    .back-link {
+      display: inline-block; margin-bottom: 16px;
+      color: #0f4c81; text-decoration: none; font-size: 14px;
+    }
+    .back-link:before { content: '← '; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>🔧</div>
+  <h1>現場名管理</h1>
+  <span class="badge">管理者専用</span>
+</div>
+
+<div class="container">
+
+  <a href="/" class="back-link">KYアプリに戻る</a>
+
+  <!-- ログイン -->
+  <div id="login-section" class="card">
+    <h2>🔑 管理者ログイン</h2>
+    <label for="input-password">パスワード</label>
+    <input type="password" id="input-password" placeholder="パスワードを入力" autocomplete="current-password">
+    <p id="login-error">パスワードが正しくありません</p>
+    <br>
+    <button class="btn btn-primary" onclick="doLogin()">ログイン</button>
+  </div>
+
+  <!-- 管理画面 -->
+  <div id="admin-section">
+    <div class="card">
+      <h2>📋 現場名リスト</h2>
+      <ul id="site-list">
+        <li><span class="empty-msg" id="loading-msg">読み込み中...</span></li>
+      </ul>
+      <div class="add-row">
+        <input type="text" id="input-new-site" placeholder="新しい現場名を入力" maxlength="80">
+        <button class="btn btn-primary" style="width:auto;padding:10px 16px;" onclick="addSite()">追加</button>
+      </div>
+    </div>
+
+    <button class="btn btn-success" onclick="saveSites()">💾 保存する</button>
+    <button class="btn btn-outline" onclick="logout()">ログアウト</button>
+    <div id="status-msg" class="status-msg"></div>
+  </div>
+
+</div>
+
+<script>
+let currentPassword = '';
+let sites = [];
+
+function doLogin() {
+  const pw = document.getElementById('input-password').value;
+  if (!pw) return;
+  currentPassword = pw;
+  loadSites();
+}
+
+document.getElementById('input-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function loadSites() {
+  try {
+    const res = await fetch('/api/sites');
+    if (!res.ok) throw new Error('読み込みエラー');
+    const data = await res.json();
+    sites = data.sites || [];
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('admin-section').style.display = 'block';
+    document.getElementById('login-error').style.display = 'none';
+    renderList();
+  } catch (e) {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = 'データ読み込みに失敗しました: ' + e.message;
+  }
+}
+
+function renderList() {
+  const ul = document.getElementById('site-list');
+  ul.innerHTML = '';
+  if (sites.length === 0) {
+    ul.innerHTML = '<li><span class="empty-msg">現場名が登録されていません</span></li>';
+    return;
+  }
+  sites.forEach((name, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <button class="move-btn" onclick="moveSite(${i}, -1)" ${i===0?'disabled':''}>▲</button>
+      <button class="move-btn" onclick="moveSite(${i}, 1)" ${i===sites.length-1?'disabled':''}>▼</button>
+      <span class="site-name">${escHtml(name)}</span>
+      <button class="del-btn" onclick="deleteSite(${i})">削除</button>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addSite() {
+  const input = document.getElementById('input-new-site');
+  const name = input.value.trim();
+  if (!name) return;
+  if (sites.includes(name)) { alert('同じ現場名が既に登録されています'); return; }
+  sites.push(name);
+  input.value = '';
+  renderList();
+}
+
+document.getElementById('input-new-site').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addSite();
+});
+
+function deleteSite(i) {
+  if (!confirm(`「${sites[i]}」を削除しますか？`)) return;
+  sites.splice(i, 1);
+  renderList();
+}
+
+function moveSite(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= sites.length) return;
+  [sites[i], sites[j]] = [sites[j], sites[i]];
+  renderList();
+}
+
+async function saveSites() {
+  const btn = document.querySelector('.btn-success');
+  const statusEl = document.getElementById('status-msg');
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+  statusEl.className = 'status-msg';
+  statusEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/sites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: currentPassword, sites }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '保存失敗');
+    statusEl.textContent = `✅ 保存しました（${sites.length}件）`;
+    statusEl.className = 'status-msg ok';
+  } catch (e) {
+    statusEl.textContent = '❌ 保存失敗: ' + e.message;
+    statusEl.className = 'status-msg err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 保存する';
+  }
+}
+
+function logout() {
+  currentPassword = '';
+  sites = [];
+  document.getElementById('login-section').style.display = 'block';
+  document.getElementById('admin-section').style.display = 'none';
+  document.getElementById('input-password').value = '';
+}
+</script>
+
+</body>
+</html>
