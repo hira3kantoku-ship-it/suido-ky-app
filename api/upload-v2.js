@@ -33,7 +33,8 @@ export default async function handler(req, res) {
     const safeDate = date || new Date().toISOString().slice(0, 10);
 
     const siteFolder = await getOrCreateFolder(access_token, safeSite, folderId);
-    const dateFolder = await getOrCreateFolder(access_token, safeDate, siteFolder);
+    const kyFolder = await getOrCreateFolder(access_token, 'KY記録', siteFolder);
+    const dateFolder = await getOrCreateFolder(access_token, safeDate, kyFolder);
 
     const pdfBuffer = Buffer.from(pdfBase64, 'base64');
     const metadata = JSON.stringify({ name: fileName, parents: [dateFolder] });

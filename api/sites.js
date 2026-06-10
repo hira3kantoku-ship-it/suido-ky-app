@@ -131,7 +131,8 @@ export default async function handler(req, res) {
       }
       const newSites = sites.filter(s => !existingSites.includes(s));
       for (const site of newSites) {
-        await getOrCreateFolder(token, site.slice(0, 50), folderId);
+        const siteFolder = await getOrCreateFolder(token, site.slice(0, 50), folderId);
+        await getOrCreateFolder(token, 'KY記録', siteFolder);
       }
 
       await writeConfigFile(token, folderId, sites, existingFileId);
